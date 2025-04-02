@@ -5,7 +5,6 @@ const express = require('express');
 const app = express();
 const PORT = 3000;
 
-// Middleware para parse de JSON
 app.use(express.json());
 
 // Middleware de autenticação
@@ -14,7 +13,7 @@ const autenticar = (req, res, next) => {
     if (token === "123") {
         next();
     } else {
-        next({ status: 401, message: 'Não Autorizado' }); // Passando erro para o handler
+        next({ status: 401, message: 'Nao Autorizado' });
     }
 };
 
@@ -23,10 +22,10 @@ const validarProduto = (req, res, next) => {
     const { nome, categoria } = req.body;
 
     if (!nome || typeof nome !== 'string' || nome.trim() === '') {
-        return next({ status: 400, message: "O campo 'nome' é obrigatório e deve ser uma string válida." });
+        return next({ status: 400, message: "Nome Invalido!" });
     }
     if (!categoria || typeof categoria !== 'string' || categoria.trim() === '') {
-        return next({ status: 400, message: "O campo 'categoria' é obrigatório e deve ser uma string válida." });
+        return next({ status: 400, message: "Categoria Invalida!" });
     }
 
     next();
@@ -37,10 +36,10 @@ const validarUsuario = (req, res, next) => {
     const { nome, email } = req.body;
 
     if (!nome || typeof nome !== 'string' || nome.trim() === '') {
-        return next({ status: 400, message: "O campo 'nome' é obrigatório e deve ser uma string válida." });
+        return next({ status: 400, message: "Nome Invalido!" });
     }
     if (!email || typeof email !== 'string' || !email.includes('@')) {
-        return next({ status: 400, message: "O campo 'email' é obrigatório e deve conter um e-mail válido." });
+        return next({ status: 400, message: "Email Invalido!" });
     }
 
     next();
@@ -48,7 +47,7 @@ const validarUsuario = (req, res, next) => {
 
 // Rota GET para boas-vindas
 app.get('/', (req, res) => {
-    res.send('Bem-vindo ao nosso site!');
+    res.send('Bem-vindo');
 });
 
 // Definir a rota dinâmica
@@ -78,7 +77,7 @@ app.post('/produtos', validarProduto, (req, res, next) => {
 
         res.status(201).json(novoProduto);
     } catch (error) {
-        next(error); // Captura erros inesperados e passa para o middleware global
+        next(error); // Captura erros e passa para o middleware de erros
     }
 });
 
@@ -105,7 +104,7 @@ app.post('/usuarios', validarUsuario, (req, res, next) => {
     }
 });
 
-// Middleware global de tratamento de erros
+// Middleware de tratamento de erros
 app.use((err, req, res, next) => {
     console.error(`Erro: ${err.message}`);
 
