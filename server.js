@@ -1,20 +1,50 @@
 // Import required modules
 const express = require('express');
-const bodyParser = express.json();
 
 // Initialize the app
 const app = express();
 const PORT = 3000;
 
-//Middleware de autenticação
+// Middleware para parse de JSON
+app.use(express.json());
+
+// Middleware de autenticação
 const autenticar = (req, res, next) => {
     const token = req.headers['authorization'];
-    if (token == 123) {
+    if (token === "123") {
         next();
     } else {
-        res.status(401).send('Não Autorizado');
+        next({ status: 401, message: 'Não Autorizado' }); // Passando erro para o handler
     }
-}
+};
+
+// Middleware de validação para produtos
+const validarProduto = (req, res, next) => {
+    const { nome, categoria } = req.body;
+
+    if (!nome || typeof nome !== 'string' || nome.trim() === '') {
+        return next({ status: 400, message: "O campo 'nome' é obrigatório e deve ser uma string válida." });
+    }
+    if (!categoria || typeof categoria !== 'string' || categoria.trim() === '') {
+        return next({ status: 400, message: "O campo 'categoria' é obrigatório e deve ser uma string válida." });
+    }
+
+    next();
+};
+
+// Middleware de validação para usuários
+const validarUsuario = (req, res, next) => {
+    const { nome, email } = req.body;
+
+    if (!nome || typeof nome !== 'string' || nome.trim() === '') {
+        return next({ status: 400, message: "O campo 'nome' é obrigatório e deve ser uma string válida." });
+    }
+    if (!email || typeof email !== 'string' || !email.includes('@')) {
+        return next({ status: 400, message: "O campo 'email' é obrigatório e deve conter um e-mail válido." });
+    }
+
+    next();
+};
 
 // Rota GET para boas-vindas
 app.get('/', (req, res) => {
@@ -27,7 +57,7 @@ app.get('/saudacao/:nome', autenticar, (req, res) => {
     res.send(`Olá, ${nome}!`);
 });
 
-// Lista de exemplo
+// Lista de produtos
 const produtos = [
     { id: 1, nome: 'Notebook', categoria: 'Eletronicos' },
     { id: 2, nome: 'Smartphone', categoria: 'Eletronicos' },
@@ -35,42 +65,55 @@ const produtos = [
     { id: 4, nome: 'Tênis', categoria: 'Calçados' }
 ];
 
-app.use(express.json()); 
+let idAtual = 4;
 
-let idAtual = 5;
-app.post('/produtos', bodyParser, (req, res) => {
-    const { nome, categoria } = req.body; 
-    const novoProduto = {id: lista.length + 1, nome, categoria};
-    lista.push(novoProduto); 
-    //console.log(lista);
-    res.status(201).json(novoProduto); 
-})
+// Rota para adicionar um novo produto com validação
+app.post('/produtos', validarProduto, (req, res, next) => {
+    try {
+        const { nome, categoria } = req.body;
 
-// Rota para adicionar um novo produto
-/*
-app.post('/produtos', bodyParser, (req, res) => {
-    const { nome, categoria } = req.body;
-    if (!nome) {
-        return res.status(400).json({ erro: 'O campo "nome" é obrigatório.' });
+        idAtual++;
+        const novoProduto = { id: idAtual, nome, categoria };
+        produtos.push(novoProduto);
+
+        res.status(201).json(novoProduto);
+    } catch (error) {
+        next(error); // Captura erros inesperados e passa para o middleware global
     }
-    
-    const novoProduto = { id: idAtual++, nome, categoria };
-    produtos.push(novoProduto);
-    console.log(lista);
-    res.status(201).json(novoProduto);
 });
-*/
 
-//Path to filter products
+// Rota para listar produtos e filtrar por categoria
 app.get('/produtos', (req, res) => {
-    const {categoria} = req.query;
+    const { categoria } = req.query;
     let resultado = produtos;
 
     if (categoria) {
-        resultado = produtos.filter(produto => produto.categoria.toLowerCase() === categoria.toLocaleLowerCase());
-
+        resultado = produtos.filter(produto => produto.categoria.toLowerCase() === categoria.toLowerCase());
     }
+
     res.json(resultado);
+});
+
+// Rota para adicionar um novo usuário com validação
+app.post('/usuarios', validarUsuario, (req, res, next) => {
+    try {
+        const { nome, email } = req.body;
+
+        res.status(201).json({ mensagem: "Usuário cadastrado com sucesso!", nome, email });
+    } catch (error) {
+        next(error);
+    }
+});
+
+// Middleware global de tratamento de erros
+app.use((err, req, res, next) => {
+    console.error(`Erro: ${err.message}`);
+
+    const statusCode = err.status || 500;
+    res.status(statusCode).json({
+        erro: err.message || "Erro interno do servidor",
+        status: statusCode
+    });
 });
 
 // Start server
